@@ -1,19 +1,32 @@
 MEM=${1:-105000000}
 BUF=${2:-105000000}
 
+# check os
+if [ "$(uname)" == "Darwin" ]; then  # MacOS
+    echo "---\nYou are using MacOS, be sure that gtime is installed via brew install gnu-time\n---"
+    TIME="gtime"
+else
+    TIME="/usr/bin/time"
+fi
+
 for i in 14400000
 do
     NUMLINES=$i
     echo "Experiment with NUMLINES=$NUMLINES"
 
-    /usr/bin/time -f /usr/bin/time -f "Time: %E\nProc: %P\nMemory: %M" -o ./logs/mem_gen_${i}.log \
+    $TIME -f "Time: %E\nProc: %P\nMemory: %M" -o ./logs/mem_gen_${i}.log \
     python3 main.py --mode gen --num_lines=$NUMLINES --sort_memory $MEM --bs $BUF
 
-    /usr/bin/time -f /usr/bin/time -f "Time: %E\nProc: %P\nMemory: %M" -o ./logs/mem_sort_${i}.log \
+    $TIME -f "Time: %E\nProc: %P\nMemory: %M" -o ./logs/mem_sort_${i}.log \
     python3 main.py --mode sort --num_lines=$NUMLINES --sort_memory $MEM --bs $BUF
 
-    FILE_SIZE=$(stat --printf="%s" file.txt)
-    FILE_SORTED_SIZE=$(stat --printf="%s" file_sorted.txt)
+    if [ "$(uname)" == "Darwin" ]; then  # MacOS
+        FILE_SIZE=$(stat -f "%z" file.txt)
+        FILE_SORTED_SIZE=$(stat -f "%z" file.txt)
+    else  # Linux
+        FILE_SIZE=$(stat --printf="%s" file.txt)
+        FILE_SORTED_SIZE=$(stat --printf="%s" file_sorted.txt)
+    fi
 
     if [ "$FILE_SIZE" != "$FILE_SORTED_SIZE" ]; then
         echo "$FILE_SIZE != $FILE_SORTED_SIZE"
